@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Fleet Catalog - AutoRent{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section text-center">
+    <div class="container">
+        <h1 class="display-5 fw-bold mb-3">Premium Vehicle Rental Fleet</h1>
+        <p class="lead text-light mb-4 col-lg-8 mx-auto opacity-75">
+            Rent cars, SUVs, pickup trucks, and superbikes with immediate live booking and transparent rates.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="#catalog" class="btn btn-primary px-4 py-2 rounded-pill fw-semibold">
+                <i class="bi bi-arrow-down-circle me-1"></i> Browse Fleet
+            </a>
+            {% if not session.get('user_id') %}
+            <a href="{{ url_for('login') }}" class="btn btn-outline-light px-4 py-2 rounded-pill fw-semibold">
+                Sign In to Reserve
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<div class="container mb-5" id="catalog">
+    <!-- Filter Bar -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
+        <form method="GET" action="{{ url_for('index') }}" class="row g-2 align-items-center">
+            <!-- Search -->
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control bg-light border-start-0" placeholder="Search make, model, or plate..." value="{{ search }}">
+                </div>
+            </div>
+
+            <!-- Vehicle Type Filter -->
+            <div class="col-md-3">
+                <select name="type" class="form-select bg-light" onchange="this.form.submit()">
+                    <option value="" {% if not selected_type %}selected{% endif %}>All Vehicle Types</option>
+                    <option value="car" {% if selected_type == 'car' %}selected{% endif %}>Cars</option>
+                    <option value="suv" {% if selected_type == 'suv' %}selected{% endif %}>SUVs</option>
+                    <option value="truck" {% if selected_type == 'truck' %}selected{% endif %}>Trucks</option>
+                    <option value="bike" {% if selected_type == 'bike' %}selected{% endif %}>Bikes / Motorcycles</option>
+                </select>
+            </div>
+
+            <!-- Availability Filter -->
+            <div class="col-md-3">
+                <select name="status" class="form-select bg-light" onchange="this.form.submit()">
+                    <option value="" {% if not selected_status %}selected{% endif %}>All Statuses</option>
+                    <option value="available" {% if selected_status == 'available' %}selected{% endif %}>Available Only</option>
+                    <option value="rented" {% if selected_status == 'rented' %}selected{% endif %}>Rented</option>
+                    <option value="maintenance" {% if selected_status == 'maintenance' %}selected{% endif %}>In Maintenance</option>
+                </select>
+            </div>
+
+            <!-- Submit / Reset -->
+            <div class="col-md-1 d-flex gap-1">
+                <button type="submit" class="btn btn-primary w-100" title="Apply Filters">
+                    <i class="bi bi-filter"></i>
+                </button>
+                {% if search or selected_type or selected_status %}
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary" title="Reset Filters">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Vehicles Count Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark">
+            Showing <span class="text-primary">{{ vehicles|length }}</span> Vehicles
+        </h5>
+        <div class="text-muted small">
+            <i class="bi bi-info-circle me-1"></i> Live inventory synced with MySQL
+        </div>
+    </div>
+
+    <!-- Vehicle Cards Grid -->
+    {% if vehicles %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for v in vehicles %}
+        <div class="col">
+            <div class="card h-100 vehicle-card">
+                <!-- Vehicle Image -->
+                <div class="vehicle-img-wrapper">
+                    {% if v.image_url %}
+                    <img src="{{ v.image_url }}" alt="{{ v.make }}" class="vehicle-img" onerror="this.src='https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80'">
+                    {% else %}
+                    <img src="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80" alt="{{ v.make }}" class="vehicle-img">
+                    {% endif %}
+                    
+                    <!-- Vehicle Type Badge -->
+                    <span class="vehicle-type-badge bg-dark bg-opacity-75 text-white">
+                        <i class="bi {% if v.vehicle_type == 'car' %}bi-car-front{% elif v.vehicle_type == 'bike' %}bi-bicycle{% elif v.vehicle_type == 'suv' %}bi-truck-flatbed{% else %}bi-truck{% endif %} me-1"></i>
+                        {{ v.vehicle_type }}
+                    </span>
+
+                    <!-- Availability Status Badge -->
+                    <span class="vehicle-status-badge badge-status-{{ v.status }}">
+                        ● {{ v.status|capitalize }}
+                    </span>
+                </div>
+
+                <!-- Card Body -->
+                <div class="card-body d-flex flex-column p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h5 class="card-title fw-bold mb-1 text-dark">
+                                {{ v.make }} {% if v.model %}{{ v.model }}{% endif %}
+                            </h5>
+                            <span class="badge bg-light text-secondary border">
+                                Plate: {{ v.license_plate }}
+                            </span>
+                            {% if v.year %}
+                            <span class="badge bg-light text-secondary border ms-1">
+                                {{ v.year }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Price & Action -->
+                    <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="price-tag">${{ "%.2f"|format(v.daily_rate) }}</span>
+                            <span class="price-period">/ day</span>
+                        </div>
+                        <div>
+                            {% if v.status == 'available' %}
+                            <a href="{{ url_for('book_vehicle', vehicle_id=v.vehicle_id) }}" class="btn btn-primary btn-sm px-3 rounded-pill fw-semibold shadow-sm">
+                                Rent Now <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                            {% else %}
+                            <button class="btn btn-secondary btn-sm px-3 rounded-pill" disabled>
+                                Unavailable
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white my-4">
+        <i class="bi bi-car-front text-muted" style="font-size: 3.5rem;"></i>
+        <h4 class="mt-3 fw-bold">No Vehicles Found</h4>
+        <p class="text-muted">No vehicles matched your search filter criteria. Try resetting filters.</p>
+        <div>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-primary rounded-pill px-4">View All Fleet</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

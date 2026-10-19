@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Book {{ vehicle.make }} {{ vehicle.model }} - AutoRent{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row g-4 justify-content-center">
+        <!-- Vehicle Summary Card -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden sticky-top" style="top: 85px;">
+                <div class="vehicle-img-wrapper" style="height: 240px;">
+                    <img src="{{ vehicle.image_url or 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80' }}" alt="{{ vehicle.make }}" class="vehicle-img">
+                    <span class="vehicle-type-badge bg-dark bg-opacity-75 text-white">
+                        {{ vehicle.vehicle_type }}
+                    </span>
+                    <span class="vehicle-status-badge badge-status-{{ vehicle.status }}">
+                        ● {{ vehicle.status|capitalize }}
+                    </span>
+                </div>
+                <div class="card-body p-4">
+                    <h3 class="fw-bold mb-1 text-dark">{{ vehicle.make }} {{ vehicle.model }}</h3>
+                    <p class="text-muted small mb-3">License Plate: <span class="badge bg-light text-dark border">{{ vehicle.license_plate }}</span></p>
+
+                    <div class="p-3 bg-light rounded-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-secondary">Base Daily Rate:</span>
+                            <span class="fw-bold text-dark fs-5">${{ "%.2f"|format(vehicle.daily_rate) }} / day</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-secondary">Vehicle Classification:</span>
+                            <span class="fw-semibold text-capitalize">{{ vehicle.vehicle_type }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-secondary">Production Year:</span>
+                            <span class="fw-semibold">{{ vehicle.year or 'Recent Model' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info border-0 rounded-3 small mb-0">
+                        <i class="bi bi-shield-check me-1"></i> Includes basic insurance & 24/7 roadside assistance.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking & Payment Form -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h4 class="fw-bold text-dark mb-1">
+                    <i class="bi bi-calendar-check text-primary me-2"></i>Complete Reservation
+                </h4>
+                <p class="text-muted small mb-4">Select your rental dates and choose your preferred payment option.</p>
+
+                <form method="POST" action="{{ url_for('book_vehicle', vehicle_id=vehicle.vehicle_id) }}" id="bookingForm">
+                    <!-- Renter Information -->
+                    <div class="mb-4">
+                        <h6 class="fw-semibold text-secondary text-uppercase small mb-3">1. Primary Renter Details</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Renter Name</label>
+                                <input type="text" class="form-control" value="{{ user.first_name }} {{ user.last_name }}" disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Email Address</label>
+                                <input type="email" class="form-control" value="{{ user.email }}" disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Driver License Number</label>
+                                <input type="text" class="form-control" value="{{ user.driver_license_number }}" disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Contact Phone</label>
+                                <input type="text" class="form-control" value="{{ user.phone or 'N/A' }}" disabled>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="text-muted opacity-25 my-4">
+
+                    <!-- Rental Window Dates -->
+                    <div class="mb-4">
+                        <h6 class="fw-semibold text-secondary text-uppercase small mb-3">2. Rental Window</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="pickup_date" class="form-label small fw-semibold">Pickup Date & Time *</label>
+                                <input type="datetime-local" class="form-control" id="pickup_date" name="pickup_date" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="dropoff_date" class="form-label small fw-semibold">Dropoff Date & Time *</label>
+                                <input type="datetime-local" class="form-control" id="dropoff_date" name="dropoff_date" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="text-muted opacity-25 my-4">
+
+                    <!-- Settlement & Payment Method -->
+                    <div class="mb-4">
+                        <h6 class="fw-semibold text-secondary text-uppercase small mb-3">3. Settlement & Payment Modality</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="payment_method" class="form-label small fw-semibold">Payment Method *</label>
+                                <select class="form-select" id="payment_method" name="payment_method" required>
+                                    <option value="credit card" selected>Credit / Debit Card</option>
+                                    <option value="upi">UPI (Instant QR / VPA)</option>
+                                    <option value="net_banking">Net Banking</option>
+                                    <option value="cash">Cash on Handover</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="payment_status" class="form-label small fw-semibold">Payment Authorization State</label>
+                                <select class="form-select" id="payment_status" name="payment_status">
+                                    <option value="success" selected>Immediate Settlement (Success)</option>
+                                    <option value="pending">Pay on Arrival (Pending)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cost Estimate Breakdown -->
+                    <div class="card bg-light border-0 rounded-3 p-3 mb-4">
+                        <div class="d-flex justify-content-between mb-2 small text-secondary">
+                            <span>Daily Rate:</span>
+                            <span>${{ "%.2f"|format(vehicle.daily_rate) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 small text-secondary">
+                            <span>Calculated Duration:</span>
+                            <span id="rentalDays">1 Day (Minimum)</span>
+                        </div>
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold fs-6 text-dark">Estimated Total:</span>
+                            <span class="fw-bold fs-4 text-primary" id="estimatedTotal">${{ "%.2f"|format(vehicle.daily_rate) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-semibold py-3 shadow-sm">
+                            <i class="bi bi-lock-fill me-2"></i>Confirm & Book Vehicle
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary rounded-pill">
+                            Back to Fleet
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dailyRate = {{ vehicle.daily_rate }};
+    const pickupInput = document.getElementById('pickup_date');
+    const dropoffInput = document.getElementById('dropoff_date');
+    const daysLabel = document.getElementById('rentalDays');
+    const totalLabel = document.getElementById('estimatedTotal');
+
+    // Default pickup to tomorrow morning, dropoff to 3 days later
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    tomorrow.setHours(10, 0, 0, 0);
+    const returnDate = new Date(tomorrow.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+    const formatDateTime = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    pickupInput.value = formatDateTime(tomorrow);
+    dropoffInput.value = formatDateTime(returnDate);
+
+    function calculateTotal() {
+        const p = new Date(pickupInput.value);
+        const d = new Date(dropoffInput.value);
+
+        if (p && d && d > p) {
+            const diffMs = d - p;
+            let diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            if (diffDays < 1) diffDays = 1;
+            const total = diffDays * dailyRate;
+            daysLabel.innerText = `${diffDays} Day${diffDays > 1 ? 's' : ''}`;
+            totalLabel.innerText = `$${total.toFixed(2)}`;
+        } else {
+            daysLabel.innerText = "Invalid Dates";
+            totalLabel.innerText = `$${dailyRate.toFixed(2)}`;
+        }
+    }
+
+    pickupInput.addEventListener('change', calculateTotal);
+    dropoffInput.addEventListener('change', calculateTotal);
+    calculateTotal();
+</script>
+{% endblock %}
